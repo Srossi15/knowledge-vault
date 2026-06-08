@@ -1,0 +1,22 @@
+{
+  "name": "knowledge-vault",
+  "version": "1.0.0",
+  "description": "Knowledge Vault - AI-powered quiz system for retention",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.3",
+    "@supabase/supabase-js": "^2.39.2",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "vercel": "^34.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
