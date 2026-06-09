@@ -222,12 +222,13 @@ Return ONLY the JSON array, no other text.`
 
   try {
     const response = await claude.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const raw = response.content[0].type === 'text' ? response.content[0].text : ''
+    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
     const questions = JSON.parse(text)
 
     // Insert questions into database
@@ -261,24 +262,46 @@ async function loadArticles() {
         ? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
         : null
 
-      // Insert article
-      const { data, error } = await supabase
+      // Check if article already exists
+      const { data: existing } = await supabase
         .from('articles')
-        .insert({
-          title: article.title,
-          content: article.content,
-          type: article.type,
-          expiration_date: expirationDate,
-          added_date: new Date().toISOString()
-        })
-        .select()
+        .select('id')
+        .eq('title', article.title)
+        .maybeSingle()
 
-      if (error) {
-        console.error(`  ❌ Failed to insert article: ${error.message}`)
-        continue
+      let articleId
+      if (existing) {
+        console.log(`  (already exists, checking quiz questions...)`)
+        articleId = existing.id
+      } else {
+        const { data, error } = await supabase
+          .from('articles')
+          .insert({
+            title: article.title,
+            content: article.content,
+            type: article.type,
+            expiration_date: expirationDate,
+            added_date: new Date().toISOString()
+          })
+          .select()
+
+        if (error) {
+          console.error(`  ❌ Failed to insert article: ${error.message}`)
+          continue
+        }
+        articleId = data[0].id
       }
 
-      const articleId = data[0].id
+      // Skip quiz generation if questions already exist
+      const { count } = await supabase
+        .from('quiz_questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('article_id', articleId)
+
+      if (count > 0) {
+        console.log(`  ✓ Already has ${count} quiz questions, skipping\n`)
+        continue
+      }
 
       // Generate quiz questions
       const questionsCount = await generateQuizQuestions(articleId, article.title, article.content)
