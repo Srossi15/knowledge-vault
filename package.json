@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vercel dev",
-    "build": "next build",
-    "start": "next start"
+    "build": "echo 'No build needed'",
+    "start": "node api/server.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
