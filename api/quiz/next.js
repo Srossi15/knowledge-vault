@@ -1,6 +1,5 @@
 // api/quiz/next.js - GET endpoint to return next quiz question
 
-import { getNextArticleToQuiz } from '../../lib/spaced-rep.js'
 import { getQuestionForArticle } from '../../lib/claude.js'
 import { supabase } from '../../lib/supabase.js'
 
