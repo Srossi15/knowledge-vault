@@ -5,37 +5,35 @@ import { getQuestionForArticle } from '../../lib/claude.js'
 import { supabase } from '../../lib/supabase.js'
 
 export default async function handler(req, res) {
-  console.log('✓ /api/quiz/next called')
-  console.log('Env check - SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'MISSING')
-  console.log('Env check - SUPABASE_KEY:', process.env.SUPABASE_KEY ? 'SET' : 'MISSING')
-
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    // Get next article to quiz on
-    console.log('Calling getNextArticleToQuiz...')
-    const articleId = await getNextArticleToQuiz()
+    // Get all articles and pick a random one
+    const { data: articles, error: articlesError } = await supabase
+      .from('articles')
+      .select('id, title, type')
 
-    if (!articleId) {
+    if (articlesError) throw articlesError
+    if (!articles || articles.length === 0) {
       return res.status(404).json({
         error: 'No articles available',
         message: 'Please upload some articles first'
       })
     }
 
-    // Get article details
-    const { data: article, error: articleError } = await supabase
-      .from('articles')
-      .select('id, title, type')
-      .eq('id', articleId)
-      .single()
+    // Pick random article
+    const article = articles[Math.floor(Math.random() * articles.length)]
 
-    if (articleError) throw articleError
+    // Get a question from this article
+    const question = await getQuestionForArticle(article.id)
 
-    // Get a question from this article (or generate one)
-    const question = await getQuestionForArticle(articleId)
+    if (!question) {
+      return res.status(404).json({
+        error: 'No questions for this article'
+      })
+    }
 
     // Format response
     return res.status(200).json({
@@ -46,7 +44,7 @@ export default async function handler(req, res) {
         difficulty: question.difficulty
       },
       article: {
-        id: articleId,
+        id: article.id,
         title: article.title,
         type: article.type
       }
